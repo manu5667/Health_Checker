@@ -1,13 +1,3 @@
-## Final Project Report
-
-**Project Title**: Kubernetes Cluster Health Checker and AutoHealing
-
-**Author**: Reshma Navale
-
-**Date**: 01-06-2025
-
-**Cluster Used**: Minikube or Kubeadm-based Cluster on AWS EC2
-
 ---
 
 ## 📖 Project Overview
