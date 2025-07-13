@@ -1,10 +1,8 @@
----
-
 ## 📖 Project Overview
 
-Manually managing Kubernetes clusters is time-consuming and prone to human error, particularly for small DevOps teams overseeing production-scale environments. This project implements an automated health-checking and self-healing system that continuously monitors cluster health, detects faults, and takes corrective actions without requiring human intervention. It improves system reliability, optimizes resource utilization, and provides real-time alerts and visual insights.
+Manually managing Kubernetes clusters is time-consuming and prone to human error, particularly for small DevOps teams overseeing production-scale environments. This project implements an automated health-checking and self-healing system that continuously monitors cluster health, detects faults, and takes corrective actions without requiring human intervention. It improves system reliability, optimises resource utilisation, and provides real-time alerts and visual insights.
 
-### 🎯 Project Objectives
+## 🎯 Project Objectives
 
 * Continuously monitor the health of nodes and pods.
 * Trigger automatic remediation of failed workloads.
