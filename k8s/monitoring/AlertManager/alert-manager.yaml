@@ -1,0 +1,138 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: alertmanager-pv
+  namespace: monitoring
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: /mnt/data/alertmanager
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: alertmanager-pvc
+  namespace: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: slack-secret
+  namespace: monitoring
+type: Opaque
+stringData:
+  slack-webhook-url: "https://hooks.slack.com/services/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"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: monitoring
+data:
+  alertmanager.yml.template: |-
+    global:
+      resolve_timeout: 5m
+
+    route:
+      receiver: 'slack-notifications'
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 30s
+      repeat_interval: 1m
+
+    receivers:
+    - name: 'slack-notifications'
+      slack_configs:
+      - send_resolved: true
+        api_url: '__SLACK_WEBHOOK_URL__'
+        channel: '#all-devopsalerts'
+        username: 'K8s-Alertmanager'
+        title: '{{ .CommonAnnotations.summary }}'
+        text: |-
+          *Alert:* {{ .CommonLabels.alertname }}
+          *Status:* {{ .Status }}
+          *Description:* {{ .CommonAnnotations.description }}
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        fallback: "Alert - {{ .CommonLabels.alertname }}: {{ .CommonAnnotations.description }}"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: alertmanager
+  template:
+    metadata:
+      labels:
+        app: alertmanager
+    spec:
+      initContainers:
+        - name: config-templater
+          image: busybox:latest
+          command:
+            - sh
+            - -c
+            - |
+              sed "s|__SLACK_WEBHOOK_URL__|${SLACK_WEBHOOK_URL}|" /tmp/alertmanager.yml.template > /etc/alertmanager/alertmanager.yml
+          env:
+            - name: SLACK_WEBHOOK_URL
+              valueFrom:
+                secretKeyRef:
+                  name: slack-secret
+                  key: slack-webhook-url
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/alertmanager
+            - name: template-volume
+              mountPath: /tmp
+      containers:
+        - name: alertmanager
+          image: prom/alertmanager:v0.27.0
+          args:
+            - "--config.file=/etc/alertmanager/alertmanager.yml"
+            - "--storage.path=/alertmanager"
+          ports:
+            - containerPort: 9093
+              name: alertmanager
+          volumeMounts:
+            - name: config-volume
+              mountPath: /etc/alertmanager
+            - name: storage-volume
+              mountPath: /alertmanager
+      volumes:
+        - name: template-volume
+          configMap:
+            name: alertmanager-config
+        - name: config-volume
+          emptyDir: {}
+        - name: storage-volume
+          persistentVolumeClaim:
+            claimName: alertmanager-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: alertmanager
+  namespace: monitoring
+spec:
+  selector:
+    app: alertmanager
+  ports:
+    - name: web
+      port: 9093
+      targetPort: 9093
+      protocol: TCP

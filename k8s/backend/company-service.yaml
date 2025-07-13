@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-checker-company-service
+  namespace: health-checker-backend
+spec:
+  selector:
+    app: health-checker-company
+  ports:
+    - protocol: TCP
+      port: 5002
+      targetPort: 5002
+  type: ClusterIP

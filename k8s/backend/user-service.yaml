@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: health-checker-user-service
+  namespace: health-checker-backend
+spec:
+  selector:
+    app: health-checker-user
+  ports:
+    - protocol: TCP
+      port: 5001
+      targetPort: 5001
+  type: ClusterIP

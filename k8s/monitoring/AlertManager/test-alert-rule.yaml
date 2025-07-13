@@ -1,0 +1,17 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: test-alert-rule
+  namespace: monitoring
+spec:
+  groups:
+    - name: test-alerts
+      rules:
+        - alert: HighCPUUsage
+          expr: process_cpu_seconds_total > 0
+          for: 10s
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU Usage Detected"
+            description: "CPU usage is above the threshold. Investigate immediately."

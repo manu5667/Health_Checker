@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-checker-company
+  namespace: health-checker-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: health-checker-company
+  template:
+    metadata:
+      labels:
+        app: health-checker-company
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5002"
+    spec:
+      containers:
+        - name: company
+          image: reshmanavale/company-service:latest  
+          ports:
+            - containerPort: 5002
+          env:
+            - name: PORT
+              value: "5002"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-company-secrets
+                  key: mongo-uri
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-company-secrets
+                  key: jwt-secret
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-company-secrets
+                  key: redis-host
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-company-secrets
+                  key: redis-port
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-company-secrets
+                  key: kafka-brokers
+          resources:
+            requests:
+             cpu: "100m"
+            limits:
+             cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5002
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5002
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3

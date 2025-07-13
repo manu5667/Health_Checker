@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-checker-auth
+  namespace: health-checker-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: health-checker-auth
+  template:
+    metadata:
+      labels:
+        app: health-checker-auth
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5000"
+    spec:
+      containers:
+        - name: auth
+          image: reshmanavale/auth-service:latest  
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-auth-secrets
+                  key: mongo-uri
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-auth-secrets
+                  key: jwt-secret
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-auth-secrets
+                  key: redis-host
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-auth-secrets
+                  key: redis-port
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-auth-secrets
+                  key: kafka-brokers
+          resources:
+            requests:
+              cpu: "100m"
+            limits:
+              cpu: "200m"        
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 2
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          

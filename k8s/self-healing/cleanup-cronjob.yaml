@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: pod-cleanup-job
+  namespace: monitoring
+spec:
+  schedule: "*/1 * * * *"  # Every minute
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: self-healing-sa
+          containers:
+            - name: cleanup
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "🔍 Scanning for pods in CrashLoopBackOff or Error state..."
+                  for ns in health-checker-db health-checker-backend monitoring; do
+                    echo "➡️ Namespace: $ns"
+                    pods=$(kubectl get pods -n "$ns" -o json | jq -r \
+                      '.items[] | select(.status.containerStatuses[]?.state.waiting.reason=="CrashLoopBackOff" or .status.containerStatuses[]?.state.waiting.reason=="Error") | .metadata.name')
+                    for pod in $pods; do
+                      if [ "$pod" != "" ]; then
+                        echo "⚠️ Deleting pod: $pod in namespace: $ns"
+                        kubectl delete pod "$pod" -n "$ns"
+                      fi
+                    done
+                  done
+                  echo "✅ Cleanup completed."
+          restartPolicy: OnFailure

@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-checker-user
+  namespace: health-checker-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: health-checker-user
+  template:
+    metadata:
+      labels:
+        app: health-checker-user
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/metrics"
+        prometheus.io/port: "5001"
+
+    spec:
+      containers:
+        - name: user
+          image: reshmanavale/user-service:latest 
+          ports:
+            - containerPort: 5001
+          env:
+            - name: PORT
+              value: "5001"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-user-secrets
+                  key: mongo-uri
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-user-secrets
+                  key: jwt-secret
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-user-secrets
+                  key: redis-host
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-user-secrets
+                  key: redis-port
+            - name: KAFKA_BROKERS
+              valueFrom:
+                secretKeyRef:
+                  name: health-checker-user-secrets
+                  key: kafka-brokers
+          resources:
+            requests:
+             cpu: "100m"
+            limits:
+             cpu: "200m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3

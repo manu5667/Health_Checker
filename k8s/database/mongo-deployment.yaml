@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: health-checker-mongo
+  namespace: health-checker-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: health-checker-mongo
+  template:
+    metadata:
+      labels:
+        app: health-checker-mongo
+    spec:
+      containers:
+        - name: mongo
+          image: mongo:6.0
+          ports:
+            - containerPort: 27017
+          volumeMounts:
+            - name: mongo-storage
+              mountPath: /data/db
+      volumes:
+        - name: mongo-storage
+          persistentVolumeClaim:
+            claimName: health-checker-mongo-pvc
